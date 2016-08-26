@@ -1,2 +1,12 @@
-# stm32f0_ukhasnet
-UKHASnet node for STM32f0 (developed on STM32F0308-Discovery
+# README
+
+This example program sends a message "Pass: n" with increasing number n
+from 0 to 200 on USART1 serial line of ST STM32F0DISCOVERY eval board.
+
+The sending is done using newlib library in a blocking way.
+
+## Board connections
+
+| Port  | Function      | Description                       |
+| ----- | ------------- | --------------------------------- |
+| `PA9` | `(USART1_TX)` | TTL serial output `(38400,8,N,1)` |
