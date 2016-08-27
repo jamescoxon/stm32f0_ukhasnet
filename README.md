@@ -1,9 +1,27 @@
 # README
 
-This example program sends a message "Pass: n" with increasing number n
-from 0 to 200 on USART1 serial line of ST STM32F0DISCOVERY eval board.
+### Pre-requisites
+#### Hardware
+* STM32F0308-Discovery Dev Board
+* RFM69HW/W
+* USB/Serial for Debuging
 
-The sending is done using newlib library in a blocking way.
+#### Software
+* arm-none-eabi-gcc (on OSX you can use homebrew and https://github.com/ARMmbed/homebrew-formulae)
+* stlink
+
+### Install
+1. git clone https://github.com/jamescoxon/stm32f0_ukhasnet.git
+2. cd stm32f0_ukhasnet
+3. git submodule init
+4. git submodule update
+5. cd libopencm3/
+6. make
+7. cd..
+8. cd src/
+9. make
+10. ..
+11. sh flash.sh
 
 ## Board connections
 
