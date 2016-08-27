@@ -21,7 +21,6 @@ OBJS += rfm69.o
 
 BINARY = ukhasnet
 
-LDSCRIPT = stm32f0-discovery.ld
+LDSCRIPT = ../stm32f0-discovery.ld
 
-include Makefile.include
-
+include ../Makefile.include
