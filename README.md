@@ -8,7 +8,7 @@
 
 #### Software
 * arm-none-eabi-gcc (on OSX you can use homebrew and https://github.com/ARMmbed/homebrew-formulae)
-* stlink
+* stlink (https://github.com/texane/stlink)
 
 ### Install
 1. git clone https://github.com/jamescoxon/stm32f0_ukhasnet.git
