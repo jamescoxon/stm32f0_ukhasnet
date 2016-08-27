@@ -19,6 +19,15 @@
 #include "rfm69.h"
 #include "RFM69Config.h"
 
+//volatile uint8_t    _mode;
+
+volatile uint8_t _bufLen;
+uint8_t _buf[RFM69_MAX_MESSAGE_LEN];
+volatile uint8_t _rxBufValid;
+float    _temperatureFudge;
+int16_t  _lastRssi;
+int16_t _rssi_threshold;
+
 static void _delay_ms(const uint32_t delay);
 
 /**
@@ -314,18 +323,6 @@ void rf69_send(const uint8_t* data, uint8_t len, uint8_t power)
 /*// RF_TESTLNA_SENSITIVE*/
 /*spiWrite(RFM69_REG_58_TEST_LNA, lnaMode);*/
 /*}*/
-
-/**
- * Clear the FIFO in the RFM69. We do this by entering STBY mode and then
- * returing to RX mode.
- * @warning Must only be called in RX Mode
- * @note Apparently this works... found in HopeRF demo code
- */
-void rf69_clearFifo(void)
-{
-    rf69_setMode(RFM69_MODE_STDBY);
-    rf69_setMode(RFM69_MODE_RX);
-}
 
 /**
  * The RFM69 has an onboard temperature sensor, read its value

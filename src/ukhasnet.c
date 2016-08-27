@@ -28,7 +28,6 @@
 #include <sys/types.h>
 #include <string.h>
 
-//#include "rfm69.h"
 #include "settings.h"
 
 #define RFM69_MODE_SLEEP    0x00 // 0.1uA
@@ -49,6 +48,10 @@ FILE *fp;
 
 static ssize_t _iord(void *_cookie, char *_buf, size_t _n);
 static ssize_t _iowr(void *_cookie, const char *_buf, size_t _n);
+
+#include "rfm69.h"
+
+/*
 bool rf69_init(void);
 uint8_t rf69_spiRead(const uint8_t reg);
 void rf69_spiWrite(const uint8_t reg, const uint8_t val);
@@ -68,6 +71,7 @@ void delay_ms(int msec_delay);
 void incrementPacketCount(void);
 void transmitData(uint8_t i);
 void awaitData(int countdown);
+ */
 
 static ssize_t _iord(void *_cookie, char *_buf, size_t _n)
 {

@@ -776,37 +776,27 @@
 #define RF_DAGC_IMPROVED_LOWBETA0   0x30  // Recommended default
 
 
-//volatile uint8_t    _mode;
-void setMode(uint8_t newMode);
+ bool rf69_init(void);
+ uint8_t rf69_spiRead(const uint8_t reg);
+ void rf69_spiWrite(const uint8_t reg, const uint8_t val);
+ void rf69_spiBurstRead(const uint8_t reg, uint8_t* dest, uint8_t len);
+ void rf69_spiBurstWrite(uint8_t reg, const uint8_t* src, uint8_t len);
+ void rf69_spiFifoWrite(const uint8_t* src, uint8_t len);
+ void rf69_setMode(const uint8_t newMode);
+ void rf69_send(const uint8_t* data, uint8_t len, uint8_t power);
+ uint8_t checkRx(void);
+ void rf69_recv(char* buf, uint8_t* len);
+ void clearFifo(void);
+ int8_t rf69_readTemp(void);
+ int16_t rf69_sampleRssi(void);
+ int16_t rf69_lastRssiThreshold(void);
+ int16_t rf69_lastRssi(void);
+ void delay_ms(int msec_delay);
+ void incrementPacketCount(void);
+ void transmitData(uint8_t i);
+ void awaitData(int countdown);
+ void setMode(uint8_t newMode);
 
-volatile uint8_t    _bufLen;
-uint8_t             _buf[RFM69_MAX_MESSAGE_LEN];
-
-volatile uint8_t    _rxBufValid;
-
-float               _temperatureFudge;
-
-int16_t                 _lastRssi;
-int16_t                 _rssi_threshold;
-
-/* Public prototypes here */
-bool rf69_init(void);
-uint8_t rf69_spiRead(const uint8_t reg);
-void rf69_spiWrite(const uint8_t reg, const uint8_t val);
-void rf69_spiBurstRead(const uint8_t reg, uint8_t* dest, uint8_t len);
-void rf69_spiBurstWrite(uint8_t reg, const uint8_t* src, uint8_t len);
-void rf69_spiFifoWrite(const uint8_t* src, uint8_t len);
-void rf69_setMode(const uint8_t newMode);
-void rf69_send(const uint8_t* data, uint8_t len, uint8_t power);
-//uint8_t checkRx(uint8_t* rcv, uint8_t* len, int8_t* rssi);
-uint8_t checkRx();
-void clearFifo(void);
-int8_t rf69_readTemp(void);
-int16_t rf69_sampleRssi(void);
-int16_t rf69_lastRssi(void);
-int16_t rf69_lastRssiThreshold(void);
-void rf69_clearFifo(void);
-void rf69_recv(char* buf, uint8_t* len);
 
 /*
 class RFM69
