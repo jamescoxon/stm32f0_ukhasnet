@@ -21,7 +21,7 @@
 8. cd..
 9. cd src/
 10. make
-11. ..
+11. cd..
 12. sh flash.sh
 
 ## Board connections
