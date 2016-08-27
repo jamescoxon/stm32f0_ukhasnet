@@ -31,4 +31,4 @@
 | `PA4` | `(SPI_SS)`    | SPI SS (also know as CSS)         |
 | `PA7` | `(SPI_MOSI)`  | SPI MOSI                          |
 | `PA6` | `(SPI_MISO)`  | SPI MISO                          |
-| 'PA5` | `(SPI_SCK)`   | SPI SCK                           |
+| `PA5` | `(SPI_SCK)`   | SPI SCK                           |
