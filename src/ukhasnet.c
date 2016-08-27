@@ -30,16 +30,6 @@
 
 #include "settings.h"
 
-#define RFM69_MODE_SLEEP    0x00 // 0.1uA
-#define RFM69_MODE_STDBY    0x04 // 1.25mA
-#define RFM69_MODE_RX       0x10 // 16mA
-#define RFM69_MODE_TX       0x0c // >33mA
-
-#define RF_PACKET2_RXRESTART        0x04
-#define RFM69_REG_3D_PACKET_CONFIG2 0x3D
-#define RF_IRQFLAGS1_TIMEOUT        0x04
-#define RFM69_REG_27_IRQ_FLAGS1     0x27
-
 uint8_t data_count = 96; // 'a' - 1 (as the first function will at 1 to make it 'a'
 unsigned int rx_packets = 0, random_output = 0, rx_restarts = 0;
 int16_t rx_rssi, floor_rssi, rssi_threshold, adc_result = 0;
@@ -50,28 +40,6 @@ static ssize_t _iord(void *_cookie, char *_buf, size_t _n);
 static ssize_t _iowr(void *_cookie, const char *_buf, size_t _n);
 
 #include "rfm69.h"
-
-/*
-bool rf69_init(void);
-uint8_t rf69_spiRead(const uint8_t reg);
-void rf69_spiWrite(const uint8_t reg, const uint8_t val);
-void rf69_spiBurstRead(const uint8_t reg, uint8_t* dest, uint8_t len);
-void rf69_spiBurstWrite(uint8_t reg, const uint8_t* src, uint8_t len);
-void rf69_spiFifoWrite(const uint8_t* src, uint8_t len);
-void rf69_setMode(const uint8_t newMode);
-void rf69_send(const uint8_t* data, uint8_t len, uint8_t power);
-uint8_t checkRx(void);
-void rf69_recv(uint8_t* buf, uint8_t* len);
-void clearFifo(void);
-int8_t rf69_readTemp(void);
-int16_t rf69_sampleRssi(void);
-int16_t rf69_lastRssiThreshold(void);
-int16_t rf69_lastRssi(void);
-void delay_ms(int msec_delay);
-void incrementPacketCount(void);
-void transmitData(uint8_t i);
-void awaitData(int countdown);
- */
 
 static ssize_t _iord(void *_cookie, char *_buf, size_t _n)
 {

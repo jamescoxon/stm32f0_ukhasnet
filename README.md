@@ -13,7 +13,7 @@
 ### Install
 1. git clone https://github.com/jamescoxon/stm32f0_ukhasnet.git
 2. cd stm32f0_ukhasnet 
-3. mv src/setting-example.h src/setting.h
+3. mv src/settings-example.h src/settings.h
 4. git submodule init
 5. git submodule update
 6. cd libopencm3/
