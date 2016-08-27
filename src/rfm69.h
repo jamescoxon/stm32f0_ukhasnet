@@ -776,231 +776,26 @@
 #define RF_DAGC_IMPROVED_LOWBETA0   0x30  // Recommended default
 
 
- bool rf69_init(void);
- uint8_t rf69_spiRead(const uint8_t reg);
- void rf69_spiWrite(const uint8_t reg, const uint8_t val);
- void rf69_spiBurstRead(const uint8_t reg, uint8_t* dest, uint8_t len);
- void rf69_spiBurstWrite(uint8_t reg, const uint8_t* src, uint8_t len);
- void rf69_spiFifoWrite(const uint8_t* src, uint8_t len);
- void rf69_setMode(const uint8_t newMode);
- void rf69_send(const uint8_t* data, uint8_t len, uint8_t power);
- uint8_t checkRx(void);
- void rf69_recv(char* buf, uint8_t* len);
- void clearFifo(void);
- int8_t rf69_readTemp(void);
- int16_t rf69_sampleRssi(void);
- int16_t rf69_lastRssiThreshold(void);
- int16_t rf69_lastRssi(void);
- void delay_ms(int msec_delay);
- void incrementPacketCount(void);
- void transmitData(uint8_t i);
- void awaitData(int countdown);
- void setMode(uint8_t newMode);
+bool rf69_init(void);
+uint8_t rf69_spiRead(const uint8_t reg);
+void rf69_spiWrite(const uint8_t reg, const uint8_t val);
+void rf69_spiBurstRead(const uint8_t reg, uint8_t* dest, uint8_t len);
+void rf69_spiBurstWrite(uint8_t reg, const uint8_t* src, uint8_t len);
+void rf69_spiFifoWrite(const uint8_t* src, uint8_t len);
+void rf69_setMode(const uint8_t newMode);
+void rf69_send(const uint8_t* data, uint8_t len, uint8_t power);
+uint8_t checkRx(void);
+void rf69_recv(char* buf, uint8_t* len);
+void clearFifo(void);
+int8_t rf69_readTemp(void);
+int16_t rf69_sampleRssi(void);
+int16_t rf69_lastRssiThreshold(void);
+int16_t rf69_lastRssi(void);
+void delay_ms(int msec_delay);
+void incrementPacketCount(void);
+void transmitData(uint8_t i);
+void awaitData(int countdown);
+void setMode(uint8_t newMode);
 
-
-/*
-class RFM69
-{
-public:
-
-    /// Constructor. You can have multiple instances, but each instance must have its own
-    /// interrupt and slave select pin. After constructing, you must call init() to initialise the intnerface
-    /// and the radio module
-    /// \param[in] slaveSelectPin the Arduino pin number of the output to use to select the RF22 before
-    /// accessing it. Defaults to the normal SS pin for your Arduino (D10 for Diecimila, Uno etc, D53 for Mega)
-    /// \param[in] interrupt The interrupt number to use. Default is interrupt 0 (Arduino input pin 2)
-    RFM69();
-  
-    /// Initialises this instance and the radio module connected to it.
-    /// The following steps are taken:
-    /// - Initialise the slave select pin and the SPI interface library
-    /// - Software reset the RF22 module
-    /// - Checks the connected RF22 module is either a RF22_DEVICE_TYPE_RX_TRX or a RF22_DEVICE_TYPE_TX
-    /// - Attaches an interrupt handler
-    /// - Configures the RF22 module
-    /// - Sets the frequncy to 434.0 MHz
-    /// - Sets the modem data rate to FSK_Rb2_4Fd36
-    /// \return  true if everything was successful
-    boolean        init();
-
-    /// Reads a single register from the RF22
-    /// \param[in] reg Register number, one of RF22_REG_*
-    /// \return The value of the register
-    uint8_t        spiRead(uint8_t reg);
-
-    /// Writes a single byte to the RF22
-    /// \param[in] reg Register number, one of RF22_REG_*
-    /// \param[in] val The value to write
-    void           spiWrite(uint8_t reg, uint8_t val);
-
-    /// Reads a number of consecutive registers from the RF22 using burst read mode
-    /// \param[in] reg Register number of the first register, one of RF22_REG_*
-    /// \param[in] dest Array to write the register values to. Must be at least len bytes
-    /// \param[in] len Number of bytes to read
-    void           spiBurstRead(uint8_t reg, uint8_t* dest, uint8_t len);
-
-    /// Write a number of consecutive registers using burst write mode
-    /// \param[in] reg Register number of the first register, one of RF22_REG_*
-    /// \param[in] src Array of new register values to write. Must be at least len bytes
-    /// \param[in] len Number of bytes to write
-    void           spiBurstWrite(uint8_t reg, const uint8_t* src, uint8_t len);
-
-    /// Sets the transmitter and receiver centre frequency
-    /// \param[in] centre Frequency in MHz. 240.0 to 960.0. Caution, some versions of RF22 and derivatives 
-    /// implemented more restricted frequency ranges.
-    /// \param[in] afcPullInRange Sets the AF Pull In Range in MHz. Defaults to 0.05MHz (50kHz). Range is 0.0 to 0.159375
-    /// for frequencies 240.0 to 480MHz, and 0.0 to 0.318750MHz for  frequencies 480.0 to 960MHz, 
-    /// \return true if the selected frquency centre + (fhch * fhs) is within range and the afcPullInRange is within range
-    boolean        setFrequency(float centre, float afcPullInRange = 0.05);
-    
-    /// Reads and returns the current RSSI value from register RF22_REG_26_RSSI. If you want to find the RSSI
-    /// of the last received message, use lastRssi() instead.
-    /// \return The current RSSI value 
-    int             rssiRead();
-
-    /// Reads and returns the current EZMAC value from register RF22_REG_31_EZMAC_STATUS
-    /// \return The current EZMAC value
-    uint8_t        ezmacStatusRead();
-
-    /// Sets the parameters for the RF22 Idle mode in register RF22_REG_07_OPERATING_MODE. 
-    /// Idle mode is the mode the RF22 will be in when not transmitting or receiving. The default idle mode 
-    /// is RF22_XTON ie READY mode. 
-    /// \param[in] mode Mask of mode bits, using RF22_SWRES, RF22_ENLBD, RF22_ENWT, 
-    /// RF22_X32KSEL, RF22_PLLON, RF22_XTON.
-    void           setMode(uint8_t mode);
-
-    /// If current mode is Rx or Tx changes it to Idle. If the transmitter or receiver is running, 
-    /// disables them.
-    void           setModeSleep();
-
-    /// If current mode is Tx or Idle, changes it to Rx. 
-    /// Starts the receiver in the RF22.
-    void           setModeRx();
-
-    /// If current mode is Rx or Idle, changes it to Rx. 
-    /// Starts the transmitter in the RF22.
-    void           setModeTx();
-
-    /// Returns the operating mode of the library.
-    /// \return the current mode, one of RF22_MODE_*
-    uint8_t        mode();
-
-    /// Sets the transmitter power output level in register RF22_REG_6D_TX_POWER.
-    /// Be a good neighbour and set the lowest power level you need.
-    /// After init(), the power wil be set to RF22_TXPOW_8DBM.
-    /// Caution: In some countries you may only select RF22_TXPOW_17DBM if you
-    /// are also using frequency hopping.
-    /// \param[in] power Transmitter power level, one of RF22_TXPOW_*
-    void           setTxPower(uint8_t power);
-
-    /// Starts the receiver and checks whether a received message is available.
-    /// This can be called multiple times in a timeout loop
-    /// \return true if a complete, valid message has been received and is able to be retrieved by
-    /// recv()
-    boolean        available();
-
-    /// Turns the receiver on if it not already on.
-    /// If there is a valid message available, copy it to buf and return true
-    /// else return false.
-    /// If a message is copied, *len is set to the length (Caution, 0 length messages are permitted).
-    /// You should be sure to call this function frequently enough to not miss any messages
-    /// It is recommended that you call it in your main loop.
-    /// \param[in] buf Location to copy the received message
-    /// \param[in,out] len Pointer to available space in buf. Set to the actual number of octets copied.
-    /// \return true if a valid message was copied to buf
-    boolean        recv(uint8_t* buf, uint8_t* len);
-
-    /// Waits until any previous transmit packet is finished being transmitted with waitPacketSent().
-    /// Then loads a message into the transmitter and starts the transmitter. Note that a message length
-    /// of 0 is NOT permitted. 
-    /// \param[in] data Array of data to be sent
-    /// \param[in] len Number of bytes of data to send (> 0)
-    /// \return true if the message length was valid and it was correctly queued for transmit
-    boolean        send(const uint8_t* data, uint8_t len);
-
-    /// Returns the RSSI (Receiver Signal Strength Indicator)
-    /// of the last received message. This measurement is taken when 
-    /// the preamble has been received. It is a (non-linear) measure of the received signal strength.
-    /// \return The RSSI
-    int             lastRssi();
-    void         isr0();
-
-protected:
-    
-    
-    /// This is a low level function to handle the interrupts for one instance of RF22.
-    /// Called automatically by isr0() and isr1()
-    /// Should not need to be called.
-    void         handleInterrupt();
-
-    /// Clears the receiver buffer.
-    /// Internal use only
-    void           clearRxBuf();
-
-    /// Clears the transmitter buffer
-    /// Internal use only
-    void           clearTxBuf();
-
-    /// Fills the transmitter buffer with the data of a mesage to be sent
-    /// \param[in] data Array of data bytes to be sent (1 to 255)
-    /// \param[in] len Number of data bytes in data (> 0)
-    /// \return true if the message length is valid
-    boolean           fillTxBuf(const uint8_t* data, uint8_t len);
-
-    /// Appends the transmitter buffer with the data of a mesage to be sent
-    /// \param[in] data Array of data bytes to be sent (0 to 255)
-    /// \param[in] len Number of data bytes in data
-    /// \return false if the resulting message would exceed RF22_MAX_MESSAGE_LEN, else true
-    boolean           appendTxBuf(const uint8_t* data, uint8_t len);
-
-    void        sendTxBuf();
-    
-    void        readRxBuf();
-
-    /// Start the transmission of the contents 
-    /// of the Tx buffer
-    void           startTransmit();
-
-    /// ReStart the transmission of the contents 
-    /// of the Tx buffer after a atransmission failure
-    void           restartTransmit();
-
-protected:
-    //GenericSPIClass*    _spi;
-
-    /// Low level interrupt service routine for RF22 connected to interrupt 0
-    //static void         isr0();
-
-    /// Low level interrupt service routine for RF22 connected to interrupt 1
-    //static void         isr1();
-private:    
-   
-    volatile uint8_t    _mode;
-
-    uint8_t             _sleepMode;
-    uint8_t             _idleMode;
-    uint8_t             _afterTxMode;
-    uint8_t          _slaveSelectPin;
-    //SPI                 _spi;
-    //InterruptIn         _interrupt;
-    uint8_t             _deviceType;
-
-    // These volatile members may get changed in the interrupt service routine
-    volatile uint8_t    _bufLen;
-    uint8_t             _buf[RFM69_MAX_MESSAGE_LEN];
-
-    volatile boolean    _rxBufValid;
-
-    volatile boolean    _txPacketSent;
-    volatile uint8_t    _txBufSentIndex;
-  
-    volatile uint16_t   _rxBad;
-    volatile uint16_t   _rxGood;
-    volatile uint16_t   _txGood;
-
-    volatile int        _lastRssi;
-};
-
-*/
 #endif 
  

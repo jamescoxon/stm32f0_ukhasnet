@@ -12,16 +12,17 @@
 
 ### Install
 1. git clone https://github.com/jamescoxon/stm32f0_ukhasnet.git
-2. cd stm32f0_ukhasnet
-3. git submodule init
-4. git submodule update
-5. cd libopencm3/
-6. make
-7. cd..
-8. cd src/
-9. make
-10. ..
-11. sh flash.sh
+2. cd stm32f0_ukhasnet 
+3. mv src/setting-example.h src/setting.h
+4. git submodule init
+5. git submodule update
+6. cd libopencm3/
+7. make
+8. cd..
+9. cd src/
+10. make
+11. ..
+12. sh flash.sh
 
 ## Board connections
 
