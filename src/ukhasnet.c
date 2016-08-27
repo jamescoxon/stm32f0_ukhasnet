@@ -36,9 +36,9 @@
 #define RFM69_MODE_RX       0x10 // 16mA
 #define RFM69_MODE_TX       0x0c // >33mA
 
-#define RF_PACKET2_RXRESTART                            0x04
+#define RF_PACKET2_RXRESTART        0x04
 #define RFM69_REG_3D_PACKET_CONFIG2 0x3D
-#define RF_IRQFLAGS1_TIMEOUT                        0x04
+#define RF_IRQFLAGS1_TIMEOUT        0x04
 #define RFM69_REG_27_IRQ_FLAGS1     0x27
 
 uint8_t data_count = 96; // 'a' - 1 (as the first function will at 1 to make it 'a'
@@ -57,7 +57,6 @@ void rf69_spiBurstWrite(uint8_t reg, const uint8_t* src, uint8_t len);
 void rf69_spiFifoWrite(const uint8_t* src, uint8_t len);
 void rf69_setMode(const uint8_t newMode);
 void rf69_send(const uint8_t* data, uint8_t len, uint8_t power);
-//uint8_t checkRx(uint8_t* rcv, uint8_t* len, int8_t* rssi);
 uint8_t checkRx(void);
 void rf69_recv(uint8_t* buf, uint8_t* len);
 void clearFifo(void);
