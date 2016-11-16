@@ -21,91 +21,132 @@
 #define _GNU_SOURCE
 #include <libopencm3/stm32/rcc.h>
 #include <libopencm3/stm32/gpio.h>
-#include <libopencm3/stm32/usart.h>
 #include <stdio.h>
-#include <errno.h>
-#include <stddef.h>
-#include <sys/types.h>
 #include <string.h>
 
 #include "settings.h"
 
 uint8_t data_count = 96; // 'a' - 1 (as the first function will at 1 to make it 'a'
 unsigned int rx_packets = 0, random_output = 0, rx_restarts = 0;
-int16_t rx_rssi, floor_rssi, rssi_threshold, adc_result = 0;
+int16_t rx_rssi, floor_rssi, rssi_threshold;
 char data_temp[66];
-FILE *fp;
-
-static ssize_t _iord(void *_cookie, char *_buf, size_t _n);
-static ssize_t _iowr(void *_cookie, const char *_buf, size_t _n);
 
 #include "rfm69.h"
 
-static ssize_t _iord(void *_cookie, char *_buf, size_t _n)
+#ifdef DEBUG
+#include <libopencm3/stm32/usart.h>
+void print(const char *s);
+
+static void usart_setup(void)
 {
-	/* dont support reading now */
-	(void)_cookie;
-	(void)_buf;
-	(void)_n;
-	return 0;
+    // Setup USART2 parameters.
+    usart_set_baudrate(USART1, 38400);
+    usart_set_databits(USART1, 8);
+    usart_set_parity(USART1, USART_PARITY_NONE);
+    usart_set_stopbits(USART1, USART_CR2_STOP_1_0BIT);
+    usart_set_mode(USART1, USART_MODE_TX);
+    usart_set_flow_control(USART1, USART_FLOWCONTROL_NONE);
+    
+    // Finally enable the USART.
+    usart_enable(USART1);
 }
 
-static ssize_t _iowr(void *_cookie, const char *_buf, size_t _n)
+//https://github.com/MrSpock/stm32f0-libopencm3-template/blob/master/main.cpp
+void print(const char *s)
 {
-	uint32_t dev = (uint32_t)_cookie;
-
-	int written = 0;
-	while (_n-- > 0) {
-		usart_send_blocking(dev, *_buf++);
-		written++;
-	};
-	return written;
+    
+    // loop through entire string
+    while (*s) {
+        if ( *s == '\n') {
+            usart_send_blocking(USART1,'\r');
+            //usart_send_blocking(USART1,'\n');
+        }
+        usart_send_blocking(USART1,*s);
+        s++;
+    }
 }
 
+#endif
 
-static FILE *usart_setup(uint32_t dev)
+#ifdef ADC_1
+
+#include <libopencm3/stm32/adc.h>
+#define 	ADC_CHANNEL1   0x01
+uint8_t channel_array[] = { ADC_CHANNEL1};
+int16_t adc_result = 0;
+uint16_t moist_sensor1();
+
+static void adc_setup(void)
 {
-	/* Setup USART1 parameters. */
-	usart_set_baudrate(dev, 38400);
-	usart_set_databits(dev, 8);
-	usart_set_parity(dev, USART_PARITY_NONE);
-	usart_set_stopbits(dev, USART_CR2_STOP_1_0BIT);
-	usart_set_mode(dev, USART_MODE_TX_RX);
-	usart_set_flow_control(dev, USART_FLOWCONTROL_NONE);
-
-	/* Finally enable the USART. */
-	usart_enable(dev);
-
-	cookie_io_functions_t stub = { _iord, _iowr, NULL, NULL };
-	FILE *fp = fopencookie((void *)dev, "rw+", stub);
-	/* Do not buffer the serial line */
-	setvbuf(fp, NULL, _IONBF, 0);
-	return fp;
-
+    rcc_periph_clock_enable(RCC_ADC);
+    rcc_periph_clock_enable(RCC_GPIOA);
+    
+    //gpio_mode_setup(GPIOA, GPIO_MODE_ANALOG, GPIO_PUPD_NONE, GPIO0);
+    gpio_mode_setup(GPIOA, GPIO_MODE_ANALOG, GPIO_PUPD_NONE, GPIO1);
+    
+    adc_power_off(ADC1);
+    adc_set_clk_source(ADC1, ADC_CLKSOURCE_ADC);
+    adc_calibrate_start(ADC1);
+    adc_calibrate_wait_finish(ADC1);
+    adc_set_operation_mode(ADC1, ADC_MODE_SCAN);
+    adc_disable_external_trigger_regular(ADC1);
+    adc_set_right_aligned(ADC1);
+    adc_enable_temperature_sensor();
+    adc_set_sample_time_on_all_channels(ADC1, ADC_SMPTIME_071DOT5);
+    adc_set_regular_sequence(ADC1, 1, channel_array);
+    adc_set_resolution(ADC1, ADC_RESOLUTION_12BIT);
+    adc_disable_analog_watchdog(ADC1);
+    adc_power_on(ADC1);
+    
+    // Wait for ADC starting up.
+    int i;
+    for (i = 0; i < 800000; i++) {    // Wait a bit.
+        __asm__("nop");
+    }
+    
 }
+
+uint16_t moist_sensor1(){
+    uint16_t temp = 0;
+    gpio_set(GPIOA, GPIO2);
+    delay_ms(1000);
+    adc_start_conversion_regular(ADC1);
+    while (!(adc_eoc(ADC1)));
+    
+    temp = adc_read_regular(ADC1);
+    
+    gpio_clear(GPIOA, GPIO2);
+    
+    return temp;
+}
+
+#endif
 
 static void clock_setup(void)
 {
     //rcc_clock_setup_in_hsi_out_48mhz();
     
 	/* Enable GPIOC clock for LED & USARTs. */
-	rcc_periph_clock_enable(RCC_GPIOC);
+	//rcc_periph_clock_enable(RCC_GPIOC);
 	rcc_periph_clock_enable(RCC_GPIOA);
 
 	/* Enable clocks for USART1. */
-	rcc_periph_clock_enable(RCC_USART1);
+	//rcc_periph_clock_enable(RCC_USART1);
 }
 
 static void gpio_setup(void)
 {
 	/* Setup GPIO pin GPIO8/9 on GPIO port C for LEDs. */
-	gpio_mode_setup(GPIOC, GPIO_MODE_OUTPUT, GPIO_PUPD_NONE, GPIO8 | GPIO9);
+	gpio_mode_setup(GPIOA, GPIO_MODE_OUTPUT, GPIO_PUPD_NONE, GPIO8 | GPIO9);
+    
+    /* Setup GPIO pin GPIO2 on GPIO port A for Sensor PWR. */
+    //gpio_mode_setup(GPIOA, GPIO_MODE_OUTPUT, GPIO_PUPD_NONE, GPIO2);
 
-	/* Setup GPIO pins for USART1 transmit. */
-	gpio_mode_setup(GPIOA, GPIO_MODE_AF, GPIO_PUPD_NONE, GPIO9);
+	// Setup GPIO pins for USART1 transmit.
+	gpio_mode_setup(GPIOB, GPIO_MODE_AF, GPIO_PUPD_NONE, GPIO6);
 
 	/* Setup USART1 TX pin as alternate function. */
-	gpio_set_af(GPIOA, GPIO_AF1, GPIO9);
+	gpio_set_af(GPIOB, GPIO_AF1, GPIO6);
 }
 
 /**
@@ -141,7 +182,7 @@ void delay_ms(int msec_delay){
 void transmitData(uint8_t i) {
     
 #ifdef GATEWAY
-    fprintf(fp, "rx: %s|0\r\n", data_temp);
+    //fprintf(fp, "rx: %s|0\r\n", data_temp);
 #endif
     
     // Transmit the data (need to include the length of the packet and power in dbmW)
@@ -191,7 +232,7 @@ inline void processData(uint32_t len) {
         }
         
 #ifdef GATEWAY
-        fprintf(fp, "rx: %s|%d\r\n",data_temp, rf69_lastRssi());
+        //fprintf(fp, "rx: %s|%d\r\n",data_temp, rf69_lastRssi());
 #endif
         //Reduce the repeat value
         data_temp[0] = data_temp[0] - 1;
@@ -232,49 +273,62 @@ void awaitData(int countdown) {
             data_temp[rx_len - 1] = '\0';
 #ifdef DEBUG
             //rssi = RFM69_lastRssi();
-            fprintf(fp, "rx: %s\r\n",data_temp);
+            //fprintf(fp, "rx: %s\r\n",data_temp);
             //printf("RSSI: %d\r\n, rssi");
 #endif
             processData(rx_len);
         }
         
         countdown--;
-        delay_ms
-        (100);
+        delay_ms(100);
     }
 }
 
 int main(void)
 {
+    
 	int n;
+    uint16_t moist1 = 0;
 
 	clock_setup();
+    
 	gpio_setup();
-	fp = usart_setup(USART1);
     
-    /* SETUP */
-    fprintf(fp, "Starting Ebeko Node\n");
+#ifdef DEBUG
+	usart_setup();
     
-    fprintf(fp, "RFM69: %d, Temp: %d\n", rf69_init(), rf69_readTemp());
+    // SETUP
+    print("Starting Ebeko Node\n");
+#endif
     
-
-	/* Blink the LED (PD12) on the board with every transmitted byte. */
+#ifdef ADC_1
+    adc_setup();
+#endif
+    
+    rf69_init();
+	
 	while (1) {
-		gpio_toggle(GPIOC, GPIO8);	/* LED on/off */
+        // Toggle the LED (PA9) on the board every loop.
+		gpio_toggle(GPIOA, GPIO9);	// LED on/off
+        
         
         incrementPacketCount();
         
         int int_temp = rf69_readTemp();
         int rssi = rf69_sampleRssi();
         
-        n = sprintf(data_temp, "%d%cT%dR%d[%s]", NUM_REPEATS, data_count, int_temp, rssi, NODE_ID);
+#ifdef ADC_1
+        moist1 = moist_sensor1();
+#endif
+
+        n = sprintf(data_temp, "%d%cT%dR%dV%d[%s]", NUM_REPEATS, data_count, int_temp, rssi, moist1, NODE_ID);
         
-        fprintf(fp, "%s\n", data_temp);
+        //print(data_temp);
         
         transmitData(n);
 
-        //delay_ms(10000);
         awaitData(TX_GAP);
+
 
 	}
 
