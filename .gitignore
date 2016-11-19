@@ -7,4 +7,4 @@ src/ukhasnet.elf
 
 src/ukhasnet.map
 
-*.o
+src/*.o
