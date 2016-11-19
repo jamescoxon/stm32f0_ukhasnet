@@ -41,4 +41,6 @@ ukhasnet.o: ukhasnet.c ../libopencm3//include/libopencm3/stm32/rcc.h \
  /usr/local/Cellar/arm-none-eabi-gcc/5.0-2016-q1-update/arm-none-eabi/include/sys/stdio.h \
  /usr/local/Cellar/arm-none-eabi-gcc/5.0-2016-q1-update/arm-none-eabi/include/string.h \
  /usr/local/Cellar/arm-none-eabi-gcc/5.0-2016-q1-update/arm-none-eabi/include/sys/string.h \
- settings.h rfm69.h
+ settings.h rfm69.h ../libopencm3//include/libopencm3/stm32/usart.h \
+ ../libopencm3//include/libopencm3/stm32/f0/usart.h \
+ ../libopencm3//include/libopencm3/stm32/common/usart_common_v2.h

@@ -64,6 +64,7 @@ void print(const char *s)
         usart_send_blocking(USART1,*s);
         s++;
     }
+    usart_send_blocking(USART1,'\r');
 }
 
 #endif
@@ -127,26 +128,26 @@ static void clock_setup(void)
     //rcc_clock_setup_in_hsi_out_48mhz();
     
 	/* Enable GPIOC clock for LED & USARTs. */
-	//rcc_periph_clock_enable(RCC_GPIOC);
+	rcc_periph_clock_enable(RCC_GPIOB);
 	rcc_periph_clock_enable(RCC_GPIOA);
 
 	/* Enable clocks for USART1. */
-	//rcc_periph_clock_enable(RCC_USART1);
+	rcc_periph_clock_enable(RCC_USART1);
 }
 
 static void gpio_setup(void)
 {
-	/* Setup GPIO pin GPIO8/9 on GPIO port C for LEDs. */
+	// Setup GPIO pin GPIO8/9 on GPIO port C for LEDs.
 	gpio_mode_setup(GPIOA, GPIO_MODE_OUTPUT, GPIO_PUPD_NONE, GPIO8 | GPIO9);
     
-    /* Setup GPIO pin GPIO2 on GPIO port A for Sensor PWR. */
+    // Setup GPIO pin GPIO2 on GPIO port A for Sensor PWR.
     //gpio_mode_setup(GPIOA, GPIO_MODE_OUTPUT, GPIO_PUPD_NONE, GPIO2);
 
-	// Setup GPIO pins for USART1 transmit.
-	gpio_mode_setup(GPIOB, GPIO_MODE_AF, GPIO_PUPD_NONE, GPIO6);
-
-	/* Setup USART1 TX pin as alternate function. */
-	gpio_set_af(GPIOB, GPIO_AF1, GPIO6);
+    // Setup GPIO pins for USART2 transmit.
+    gpio_mode_setup(GPIOB, GPIO_MODE_AF, GPIO_PUPD_NONE, GPIO6);
+    
+    // Setup USART1 TX pin as alternate function.
+    gpio_set_af(GPIOB, GPIO_AF0, GPIO6);
 }
 
 /**
@@ -323,7 +324,7 @@ int main(void)
 
         n = sprintf(data_temp, "%d%cT%dR%dV%d[%s]", NUM_REPEATS, data_count, int_temp, rssi, moist1, NODE_ID);
         
-        //print(data_temp);
+        print(data_temp);
         
         transmitData(n);
 

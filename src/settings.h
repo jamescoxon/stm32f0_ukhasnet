@@ -12,7 +12,7 @@
 //#define MK2
 
 // Tx debug data and print full debug to serial
-//#define DEBUG
+#define DEBUG
 
 //Print rx'd strings only
 //#define GATEWAY

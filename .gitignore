@@ -1,1 +1,10 @@
 libopencm3/
+src/ukhasnet.bin
+
+src/ukhasnet.elf
+
+src/ukhasnet.elf
+
+src/ukhasnet.map
+
+*.o
