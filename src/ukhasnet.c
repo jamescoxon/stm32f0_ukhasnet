@@ -27,11 +27,11 @@
 #include "settings.h"
 
 uint8_t data_count = 96; // 'a' - 1 (as the first function will at 1 to make it 'a'
-unsigned int rx_packets = 0, random_output = 0, rx_restarts = 0;
-int16_t rx_rssi, floor_rssi, rssi_threshold;
+unsigned int random_output = 50;
 char data_temp[66];
 
 #include "rfm69.h"
+#include "RFM69Config.h"
 
 #ifdef DEBUG
 #include <libopencm3/stm32/usart.h>
@@ -72,10 +72,7 @@ void print(const char *s)
 #ifdef ADC_1
 
 #include <libopencm3/stm32/adc.h>
-#define 	ADC_CHANNEL1   0x01
-uint8_t channel_array[] = { ADC_CHANNEL1};
-int16_t adc_result = 0;
-uint16_t moist_sensor1();
+static uint16_t read_adc_native(uint8_t channel);
 
 static void adc_setup(void)
 {
@@ -84,6 +81,7 @@ static void adc_setup(void)
     
     //gpio_mode_setup(GPIOA, GPIO_MODE_ANALOG, GPIO_PUPD_NONE, GPIO0);
     gpio_mode_setup(GPIOA, GPIO_MODE_ANALOG, GPIO_PUPD_NONE, GPIO1);
+    gpio_mode_setup(GPIOA, GPIO_MODE_ANALOG, GPIO_PUPD_NONE, GPIO2);
     
     adc_power_off(ADC1);
     adc_set_clk_source(ADC1, ADC_CLKSOURCE_ADC);
@@ -94,30 +92,23 @@ static void adc_setup(void)
     adc_set_right_aligned(ADC1);
     adc_enable_temperature_sensor();
     adc_set_sample_time_on_all_channels(ADC1, ADC_SMPTIME_071DOT5);
-    adc_set_regular_sequence(ADC1, 1, channel_array);
     adc_set_resolution(ADC1, ADC_RESOLUTION_12BIT);
     adc_disable_analog_watchdog(ADC1);
     adc_power_on(ADC1);
     
     // Wait for ADC starting up.
-    int i;
-    for (i = 0; i < 800000; i++) {    // Wait a bit.
-        __asm__("nop");
-    }
+    delay_ms(800);
     
 }
 
-uint16_t moist_sensor1(){
-    uint16_t temp = 0;
-    gpio_set(GPIOA, GPIO2);
-    delay_ms(1000);
+static uint16_t read_adc_native(uint8_t channel)
+{
+    uint8_t channel_array[16];
+    channel_array[0] = channel;
+    adc_set_regular_sequence(ADC1, 1, channel_array);
     adc_start_conversion_regular(ADC1);
-    while (!(adc_eoc(ADC1)));
-    
-    temp = adc_read_regular(ADC1);
-    
-    gpio_clear(GPIOA, GPIO2);
-    
+    while (!adc_eoc(ADC1));
+        uint16_t temp = adc_read_regular(ADC1);
     return temp;
 }
 
@@ -131,23 +122,28 @@ static void clock_setup(void)
 	rcc_periph_clock_enable(RCC_GPIOB);
 	rcc_periph_clock_enable(RCC_GPIOA);
 
+#ifdef DEBUG
 	/* Enable clocks for USART1. */
 	rcc_periph_clock_enable(RCC_USART1);
+#endif
+    
 }
 
 static void gpio_setup(void)
 {
 	// Setup GPIO pin GPIO8/9 on GPIO port C for LEDs.
-	gpio_mode_setup(GPIOA, GPIO_MODE_OUTPUT, GPIO_PUPD_NONE, GPIO8 | GPIO9);
+	//gpio_mode_setup(GPIOA, GPIO_MODE_OUTPUT, GPIO_PUPD_NONE, GPIO8 | GPIO9);
     
     // Setup GPIO pin GPIO2 on GPIO port A for Sensor PWR.
     //gpio_mode_setup(GPIOA, GPIO_MODE_OUTPUT, GPIO_PUPD_NONE, GPIO2);
-
+    
+#ifdef DEBUG
     // Setup GPIO pins for USART2 transmit.
     gpio_mode_setup(GPIOB, GPIO_MODE_AF, GPIO_PUPD_NONE, GPIO6);
     
     // Setup USART1 TX pin as alternate function.
     gpio_set_af(GPIOB, GPIO_AF0, GPIO6);
+#endif
 }
 
 /**
@@ -189,6 +185,7 @@ void transmitData(uint8_t i) {
     // Transmit the data (need to include the length of the packet and power in dbmW)
     rf69_send((uint8_t*)data_temp, i, POWER_OUTPUT);
     
+    //tx_packets++;
 //#ifdef ZOMBIE_MODE
     //Ensure we are in Sleep mode to save power
 //    rf69_setMode(RFM69_MODE_SLEEP);
@@ -233,7 +230,7 @@ inline void processData(uint32_t len) {
         }
         
 #ifdef GATEWAY
-        //fprintf(fp, "rx: %s|%d\r\n",data_temp, rf69_lastRssi());
+        //print("rx: %s|%d\r\n",data_temp, rf69_lastRssi());
 #endif
         //Reduce the repeat value
         data_temp[0] = data_temp[0] - 1;
@@ -250,7 +247,6 @@ inline void processData(uint32_t len) {
         packet_len = strlen((char*)data_temp);
         delay_ms(random_output); // Random delay to try and avoid packet collision
         
-        rx_packets++;
         
         transmitData(packet_len);
         break;
@@ -272,9 +268,10 @@ void awaitData(int countdown) {
         if(checkRx() == 1) {
             rf69_recv(data_temp,  &rx_len);
             data_temp[rx_len - 1] = '\0';
+            //rx_packets++;
 #ifdef DEBUG
             //rssi = RFM69_lastRssi();
-            //fprintf(fp, "rx: %s\r\n",data_temp);
+            print(data_temp);
             //printf("RSSI: %d\r\n, rssi");
 #endif
             processData(rx_len);
@@ -289,17 +286,19 @@ int main(void)
 {
     
 	int n;
-    uint16_t moist1 = 0;
+    uint16_t volt1 = 0, volt2 = 0;
 
 	clock_setup();
     
 	gpio_setup();
+    //gpio_clear(GPIOA, GPIO9);	// LED on/off
     
 #ifdef DEBUG
 	usart_setup();
     
     // SETUP
-    print("Starting Ebeko Node\n");
+    print("Starting\n");
+    
 #endif
     
 #ifdef ADC_1
@@ -310,25 +309,40 @@ int main(void)
 	
 	while (1) {
         // Toggle the LED (PA9) on the board every loop.
-		gpio_toggle(GPIOA, GPIO9);	// LED on/off
+		//gpio_toggle(GPIOA, GPIO9);	// LED on/off
         
         
         incrementPacketCount();
+        int int_temp, rssi;
         
-        int int_temp = rf69_readTemp();
-        int rssi = rf69_sampleRssi();
+        int_temp = rf69_readTemp();
+        rssi = rf69_sampleRssi();
         
 #ifdef ADC_1
-        moist1 = moist_sensor1();
+        volt1 = read_adc_native(0x01) - ADC_1_FUDGE_1;
+        delay_ms(100);
+        volt2 = read_adc_native(0x02) - ADC_1_FUDGE_2;
 #endif
 
-        n = sprintf(data_temp, "%d%cT%dR%dV%d[%s]", NUM_REPEATS, data_count, int_temp, rssi, moist1, NODE_ID);
+        n = sprintf(data_temp, "%d%cT%dR%dV%d,%dX%d[%s]", NUM_REPEATS, data_count, int_temp, rssi, volt1, volt2, PACKET_VERSION, NODE_ID);
         
+        //n = sprintf(data_temp, "%d", moist1);
+        
+#ifdef DEBUG
         print(data_temp);
+        //print("\n");
+#endif
         
         transmitData(n);
 
-        awaitData(TX_GAP);
+        if (volt1 > VCC_THRES){
+            awaitData(TX_GAP);
+        }
+        else{
+            //Ideally we'll add some power saving here
+            rf69_setMode(RFM69_MODE_SLEEP);
+            delay_ms(60000);
+        }
 
 
 	}

@@ -8,3 +8,5 @@ src/ukhasnet.elf
 src/ukhasnet.map
 
 src/*.o
+
+src/*.d

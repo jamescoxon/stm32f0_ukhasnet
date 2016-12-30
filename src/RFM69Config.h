@@ -3,6 +3,8 @@
 
 #include "rfm69.h"
 
+#define PACKET_VERSION 3
+
 /*PROGMEM */ static const uint8_t CONFIG[][2] =
 {
     { RFM69_REG_01_OPMODE,      RF_OPMODE_SEQUENCER_ON | RF_OPMODE_LISTEN_OFF | RFM69_MODE_RX },
@@ -13,12 +15,14 @@
     
     { RFM69_REG_05_FDEV_MSB,    0x00}, // 12000 hz (24000 hz shift)
     { RFM69_REG_06_FDEV_LSB,    0xC5},
+    //{ RFM69_REG_06_FDEV_LSB,    0x52},
     
     { RFM69_REG_07_FRF_MSB,     0xD9 }, // 869.5 MHz
-    { RFM69_REG_08_FRF_MID,     0x60 }, // calculated: 0x80?
-    { RFM69_REG_09_FRF_LSB,     0x12 },
+    { RFM69_REG_08_FRF_MID,     0x60 }, // calculated: 0x80? 0x5F
+    { RFM69_REG_09_FRF_LSB,     0x12 }, //0xBD
     
-    { RFM69_REG_0B_AFC_CTRL,    RF_AFCLOWBETA_OFF }, // AFC Offset On
+    //{ RFM69_REG_0B_AFC_CTRL,    RF_AFCLOWBETA_ON }, // AFC Offset On
+    { RFM69_REG_0B_AFC_CTRL,    RF_AFCLOWBETA_OFF }, // AFC Offset Off
     
     // PA Settings
     // +20dBm formula: Pout=-11+OutputPower[dBmW] (with PA1 and PA2)** and high power PA settings (section 3.3.7 in datasheet)
@@ -33,12 +37,16 @@
     { RFM69_REG_18_LNA,         RF_LNA_ZIN_50 }, // 50 ohm for matched antenna, 200 otherwise
     
     { RFM69_REG_19_RX_BW,       RF_RXBW_DCCFREQ_010 | RF_RXBW_MANT_16 | RF_RXBW_EXP_2}, // Rx Bandwidth: 128KHz
+    //{ RFM69_REG_19_RX_BW,       RF_RXBW_DCCFREQ_010 | RF_RXBW_MANT_24 | RF_RXBW_EXP_5}, // Rx Bandwidth: 10kHz
+    //{ RFM69_REG_19_RX_BW,       RF_RXBW_DCCFREQ_010 | RF_RXBW_MANT_16 | RF_RXBW_EXP_4}, // Rx Bandwidth: 31.1KHz
     
-    { RFM69_REG_1E_AFC_FEI,     RF_AFCFEI_AFCAUTO_ON | RF_AFCFEI_AFCAUTOCLEAR_ON }, // Automatic AFC on, clear after each packet
+    //{ RFM69_REG_1E_AFC_FEI,     RF_AFCFEI_AFCAUTO_ON | RF_AFCFEI_AFCAUTOCLEAR_ON }, // Automatic AFC on, clear after each packet
+    { RFM69_REG_1E_AFC_FEI,     RF_AFCFEI_AFCAUTO_OFF | RF_AFCFEI_AFCAUTOCLEAR_OFF }, // Automatic AFC off, clear off after each packet
+    //{RFM69_REG_1E_AFC_FEI, RF_AFCFEI_AFCAUTO_OFF}, //AFC off
     
     { RFM69_REG_25_DIO_MAPPING1, RF_DIOMAPPING1_DIO0_01 },
     { RFM69_REG_26_DIO_MAPPING2, RF_DIOMAPPING2_CLKOUT_OFF }, // Switch off Clkout
-
+    
     /* receiver timeout:
      * max packet length is 72 octets
      * (3 preamble, 2 sync, 1 length, 64 message, 2 CRC)

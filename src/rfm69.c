@@ -28,8 +28,6 @@ float    _temperatureFudge;
 int16_t  _lastRssi;
 int16_t _rssi_threshold;
 
-static void _delay_ms(const uint32_t delay);
-
 /**
  * Assert SS on the RFM69 for communications.
  */
@@ -78,7 +76,7 @@ bool rf69_init(void)
     
     RFM_SS_DEASSERT();
     
-    _delay_ms(100);
+    delay_ms(100);
     
     // Set up device
     for(i = 0; CONFIG[i][0] != 255; i++)
@@ -345,7 +343,7 @@ int8_t rf69_readTemp(void)
     timeout = 0;
     while(!(RF_TEMP1_MEAS_RUNNING & rf69_spiRead(RFM69_REG_4E_TEMP1)))
     {
-        _delay_ms(1);
+        delay_ms(1);
         if(++timeout > 50)
             return -127.0;
         rf69_spiWrite(RFM69_REG_4E_TEMP1, RF_TEMP1_MEAS_START);
@@ -355,7 +353,7 @@ int8_t rf69_readTemp(void)
     timeout = 0;
     while(RF_TEMP1_MEAS_RUNNING & rf69_spiRead(RFM69_REG_4E_TEMP1))
     {
-        _delay_ms(1);
+        delay_ms(1);
         if(++timeout > 10)
             return -127.0;
     }
@@ -391,13 +389,4 @@ int16_t rf69_lastRssiThreshold() {
 
 int16_t rf69_lastRssi() {
     return _lastRssi;
-}
-
-static void _delay_ms(const uint32_t delay)
-{
-    uint32_t i, j;
-    
-    for(i=0; i< delay; i++)
-        for(j=0; j<1000; j++)
-            __asm__("nop");
 }
