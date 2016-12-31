@@ -791,7 +791,7 @@ int8_t rf69_readTemp(void);
 int16_t rf69_sampleRssi(void);
 int16_t rf69_lastRssiThreshold(void);
 int16_t rf69_lastRssi(void);
-void delay_ms(int msec_delay);
+void delay_ms(uint32_t msec_delay);
 void incrementPacketCount(void);
 void transmitData(uint8_t i);
 void awaitData(int countdown);

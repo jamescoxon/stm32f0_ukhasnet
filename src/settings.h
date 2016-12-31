@@ -1,8 +1,8 @@
 //NODE SPECIFIC DETAILS - need to be changed
 #define NUM_REPEATS			5
-#define NODE_ID				"AC1"
+#define NODE_ID				"AC2"
 #define LOCATION_STRING		"0.000,0.0000"
-#define POWER_OUTPUT		10				// Output power in dbmW
+#define POWER_OUTPUT		20				// Output power in dbmW
 #define TX_GAP				300			// Milliseconds between tx = tx_gap * 100, therefore 1000 = 100 seconds
 #define MAX_TX_CHARS		32				// Maximum chars which can be transmitted in a single packet
 

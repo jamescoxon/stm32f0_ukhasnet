@@ -21,6 +21,7 @@
 #define _GNU_SOURCE
 #include <libopencm3/stm32/rcc.h>
 #include <libopencm3/stm32/gpio.h>
+#include <libopencm3/cm3/systick.h>
 #include <stdio.h>
 #include <string.h>
 
@@ -40,7 +41,7 @@ void print(const char *s);
 static void usart_setup(void)
 {
     // Setup USART2 parameters.
-    usart_set_baudrate(USART1, 38400);
+    usart_set_baudrate(USART1, 9600);
     usart_set_databits(USART1, 8);
     usart_set_parity(USART1, USART_PARITY_NONE);
     usart_set_stopbits(USART1, USART_CR2_STOP_1_0BIT);
@@ -114,9 +115,44 @@ static uint16_t read_adc_native(uint8_t channel)
 
 #endif
 
+/* monotonically increasing number of milliseconds from reset
+ * overflows every 49 days if you're wondering
+ */
+volatile uint32_t system_millis;
+
+/* Called when systick fires */
+void sys_tick_handler(void)
+{
+    system_millis++;
+}
+
+/* sleep for delay milliseconds */
+void delay_ms(uint32_t msec_delay)
+{
+    uint32_t wake = system_millis + msec_delay;
+    while (wake > system_millis);
+}
+
+/*
+ * Set up timer to fire every x milliseconds
+ * This is a unusual usage of systick, be very careful with the 24bit range
+ * of the systick counter!  You can range from 1 to 2796ms with this.
+ */
+static void systick_setup(int xms)
+{
+    /* div8 per ST, stays compatible with M3/M4 parts, well done ST */
+    systick_set_clocksource(STK_CSR_CLKSOURCE_EXT);
+    /* clear counter so it starts right away */
+    STK_CVR = 0;
+    
+    systick_set_reload(rcc_ahb_frequency / 8 / 1000 * xms);
+    systick_counter_enable();
+    systick_interrupt_enable();
+}
+
 static void clock_setup(void)
 {
-    //rcc_clock_setup_in_hsi_out_48mhz();
+    rcc_clock_setup_in_hsi_out_48mhz();
     
 	/* Enable GPIOC clock for LED & USARTs. */
 	rcc_periph_clock_enable(RCC_GPIOB);
@@ -162,15 +198,17 @@ void incrementPacketCount(void) {
     }
 }
 
+/*
 void delay_ms(int msec_delay){
     int i, j = 0;
     while (j < msec_delay){
-        for (i = 0; i < 1000; i++) {	/* Wait a bit. */
+        for (i = 0; i < 1000; i++) {	// Wait a bit.
             __asm__("NOP");
         }
         j++;
     }
 }
+*/
 
 /**
  * Packet data transmission
@@ -290,6 +328,8 @@ int main(void)
 
 	clock_setup();
     
+    systick_setup(1); //ticks every 1ms
+    
 	gpio_setup();
     //gpio_clear(GPIOA, GPIO9);	// LED on/off
     
@@ -311,7 +351,6 @@ int main(void)
         // Toggle the LED (PA9) on the board every loop.
 		//gpio_toggle(GPIOA, GPIO9);	// LED on/off
         
-        
         incrementPacketCount();
         int int_temp, rssi;
         
@@ -326,7 +365,7 @@ int main(void)
 
         n = sprintf(data_temp, "%d%cT%dR%dV%d,%dX%d[%s]", NUM_REPEATS, data_count, int_temp, rssi, volt1, volt2, PACKET_VERSION, NODE_ID);
         
-        //n = sprintf(data_temp, "%d", moist1);
+        
         
 #ifdef DEBUG
         print(data_temp);
@@ -335,6 +374,7 @@ int main(void)
         
         transmitData(n);
 
+#ifdef ZOMBIE_MODE
         if (volt1 > VCC_THRES){
             awaitData(TX_GAP);
         }
@@ -343,7 +383,9 @@ int main(void)
             rf69_setMode(RFM69_MODE_SLEEP);
             delay_ms(60000);
         }
-
+#else
+        awaitData(TX_GAP);
+#endif
 
 	}
 
