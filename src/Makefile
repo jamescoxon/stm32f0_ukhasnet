@@ -17,7 +17,8 @@
 ## along with this library.  If not, see <http://www.gnu.org/licenses/>.
 ##
 
-OBJS += rfm69.o
+OBJS += rfm69.o \
+        gps.o
 
 BINARY = ukhasnet
 

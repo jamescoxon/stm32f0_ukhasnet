@@ -22,34 +22,71 @@
 #include <libopencm3/stm32/rcc.h>
 #include <libopencm3/stm32/gpio.h>
 #include <libopencm3/cm3/systick.h>
+#include <libopencm3/cm3/nvic.h>
 #include <stdio.h>
 #include <string.h>
 
 #include "settings.h"
+#include "misc.h"
 
 uint8_t data_count = 96; // 'a' - 1 (as the first function will at 1 to make it 'a'
 unsigned int random_output = 50;
 char data_temp[66];
 
+/* monotonically increasing number of milliseconds from reset
+ * overflows every 49 days if you're wondering
+ */
+volatile uint32_t system_millis;
+
 #include "rfm69.h"
 #include "RFM69Config.h"
+#include "uart.h"
 
-#ifdef DEBUG
-#include <libopencm3/stm32/usart.h>
-void print(const char *s);
+char serialBuffer[128];
+uint8_t serialBuffer_write = 0;
 
 static void usart_setup(void)
 {
-    // Setup USART2 parameters.
+    
+    nvic_enable_irq(NVIC_USART1_IRQ);
+    
+    // Setup USART1 parameters.
     usart_set_baudrate(USART1, 9600);
     usart_set_databits(USART1, 8);
     usart_set_parity(USART1, USART_PARITY_NONE);
     usart_set_stopbits(USART1, USART_CR2_STOP_1_0BIT);
-    usart_set_mode(USART1, USART_MODE_TX);
+    usart_set_mode(USART1, USART_MODE_TX_RX);
     usart_set_flow_control(USART1, USART_FLOWCONTROL_NONE);
+    usart_enable_rx_interrupt(USART1);
     
     // Finally enable the USART.
     usart_enable(USART1);
+}
+
+void usart1_isr(void){
+    
+    serialBuffer[serialBuffer_write] = usart_recv_blocking(USART1);
+    
+    if(serialBuffer_write < 127){
+        serialBuffer_write++;
+    }
+    else{
+        serialBuffer_write = 0;
+    }
+    
+    //usart_send_blocking(USART1, serialBuffer[serialBuffer_write]); //Echo back
+}
+
+uint8_t usart1_available(){
+    return serialBuffer_write;
+}
+
+void usart1_clear(){
+    serialBuffer_write = 0;
+}
+
+char usart1_buffer(uint8_t buf_position){
+    return serialBuffer[buf_position];
 }
 
 //https://github.com/MrSpock/stm32f0-libopencm3-template/blob/master/main.cpp
@@ -68,6 +105,8 @@ void print(const char *s)
     usart_send_blocking(USART1,'\r');
 }
 
+#ifdef GPS
+    #include "gps.h"
 #endif
 
 #ifdef ADC_1
@@ -115,10 +154,18 @@ static uint16_t read_adc_native(uint8_t channel)
 
 #endif
 
-/* monotonically increasing number of milliseconds from reset
- * overflows every 49 days if you're wondering
- */
-volatile uint32_t system_millis;
+static void clock_setup(void)
+{
+    rcc_clock_setup_in_hsi_out_48mhz();
+    
+	/* Enable GPIOC clock for LED & USARTs. */
+	rcc_periph_clock_enable(RCC_GPIOB);
+	rcc_periph_clock_enable(RCC_GPIOA);
+
+	/* Enable clocks for USART1. */
+	rcc_periph_clock_enable(RCC_USART1);
+    
+}
 
 /* Called when systick fires */
 void sys_tick_handler(void)
@@ -150,21 +197,6 @@ static void systick_setup(int xms)
     systick_interrupt_enable();
 }
 
-static void clock_setup(void)
-{
-    rcc_clock_setup_in_hsi_out_48mhz();
-    
-	/* Enable GPIOC clock for LED & USARTs. */
-	rcc_periph_clock_enable(RCC_GPIOB);
-	rcc_periph_clock_enable(RCC_GPIOA);
-
-#ifdef DEBUG
-	/* Enable clocks for USART1. */
-	rcc_periph_clock_enable(RCC_USART1);
-#endif
-    
-}
-
 static void gpio_setup(void)
 {
 	// Setup GPIO pin GPIO8/9 on GPIO port C for LEDs.
@@ -173,13 +205,12 @@ static void gpio_setup(void)
     // Setup GPIO pin GPIO2 on GPIO port A for Sensor PWR.
     //gpio_mode_setup(GPIOA, GPIO_MODE_OUTPUT, GPIO_PUPD_NONE, GPIO2);
     
-#ifdef DEBUG
-    // Setup GPIO pins for USART2 transmit.
-    gpio_mode_setup(GPIOB, GPIO_MODE_AF, GPIO_PUPD_NONE, GPIO6);
+    // Setup GPIO pins for USART1 transmit and receive.
+    gpio_mode_setup(GPIOB, GPIO_MODE_AF, GPIO_PUPD_NONE, GPIO6|GPIO7);
     
     // Setup USART1 TX pin as alternate function.
     gpio_set_af(GPIOB, GPIO_AF0, GPIO6);
-#endif
+    gpio_set_af(GPIOB, GPIO_AF0, GPIO7);
 }
 
 /**
@@ -198,18 +229,6 @@ void incrementPacketCount(void) {
     }
 }
 
-/*
-void delay_ms(int msec_delay){
-    int i, j = 0;
-    while (j < msec_delay){
-        for (i = 0; i < 1000; i++) {	// Wait a bit.
-            __asm__("NOP");
-        }
-        j++;
-    }
-}
-*/
-
 /**
  * Packet data transmission
  * @param Packet length
@@ -224,15 +243,15 @@ void transmitData(uint8_t i) {
     rf69_send((uint8_t*)data_temp, i, POWER_OUTPUT);
     
     //tx_packets++;
-//#ifdef ZOMBIE_MODE
+#ifdef ZOMBIE_MODE
     //Ensure we are in Sleep mode to save power
-//    rf69_setMode(RFM69_MODE_SLEEP);
-//#else
+    rf69_setMode(RFM69_MODE_SLEEP);
+#else
     //Ensure we are in RX mode
     rf69_setMode(RFM69_MODE_RX);
     
     delay_ms(500);
-//#endif
+#endif
 
 }
 
@@ -333,12 +352,16 @@ int main(void)
 	gpio_setup();
     //gpio_clear(GPIOA, GPIO9);	// LED on/off
     
-#ifdef DEBUG
-	usart_setup();
+    usart_setup();
     
+#ifdef GPS
+    delay_ms(5000);
+    setupGPS();
+#endif
+    
+#ifdef DEBUG
     // SETUP
     print("Starting\n");
-    
 #endif
     
 #ifdef ADC_1
@@ -363,9 +386,20 @@ int main(void)
         volt2 = read_adc_native(0x02) - ADC_1_FUDGE_2;
 #endif
 
-        n = sprintf(data_temp, "%d%cT%dR%dV%d,%dX%d[%s]", NUM_REPEATS, data_count, int_temp, rssi, volt1, volt2, PACKET_VERSION, NODE_ID);
+#ifdef GPS
+        print(serialBuffer);
         
+        int nav_outcome = gps_check_nav();
         
+        if (nav_outcome != 6){
+            setupGPS();
+            delay_ms(5000);
+        }
+        
+        gps_get_position();
+#endif
+        
+        n = sprintf(data_temp, "%d%cL%ld,%ld,%ldT%dR%dV%d,%dX%d[%s]", NUM_REPEATS, data_count, lat, lon, alt, int_temp, rssi, volt1, volt2, PACKET_VERSION, NODE_ID);
         
 #ifdef DEBUG
         print(data_temp);
@@ -374,7 +408,7 @@ int main(void)
         
         transmitData(n);
 
-#ifdef ZOMBIE_MODE
+#ifdef POWER_SAVING
         if (volt1 > VCC_THRES){
             awaitData(TX_GAP);
         }

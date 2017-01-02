@@ -17,6 +17,7 @@
 #include <inttypes.h>
 #include <string.h>
 #include "rfm69.h"
+#include "misc.h"
 #include "RFM69Config.h"
 
 //volatile uint8_t    _mode;

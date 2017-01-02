@@ -12,13 +12,13 @@
 //#define MK2
 
 // Tx debug data and print full debug to serial
-#define DEBUG
+//#define DEBUG
 
 //Print rx'd strings only
 //#define GATEWAY
 
 // Comment out if you don't want GPS (ublox binary)
-//#define GPS
+#define GPS
 
 //#define SERIAL_IN
 
@@ -30,7 +30,7 @@
 #define VCC_THRES 2395
 
 // Zombie mode, no Rx, just Tx, saves power (as radio is sleeping between tx) and also flash
-//#define ZOMBIE_MODE
+//#define POWER_SAVING
 
 //TEMPERATURE SETTINGS
 #define RFM_TEMP
