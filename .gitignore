@@ -10,3 +10,5 @@ src/ukhasnet.map
 src/*.o
 
 src/*.d
+
+src/settings.h

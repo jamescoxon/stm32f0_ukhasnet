@@ -243,7 +243,7 @@ void transmitData(uint8_t i) {
     rf69_send((uint8_t*)data_temp, i, POWER_OUTPUT);
     
     //tx_packets++;
-#ifdef ZOMBIE_MODE
+#ifdef POWER_SAVING
     //Ensure we are in Sleep mode to save power
     rf69_setMode(RFM69_MODE_SLEEP);
 #else
@@ -397,25 +397,34 @@ int main(void)
         }
         
         gps_get_position();
-#endif
         
         n = sprintf(data_temp, "%d%cL%ld,%ld,%ldT%dR%dV%d,%dX%d[%s]", NUM_REPEATS, data_count, lat, lon, alt, int_temp, rssi, volt1, volt2, PACKET_VERSION, NODE_ID);
         
+#else
+        n = sprintf(data_temp, "%d%cT%dR%dV%d,%dX%d[%s]", NUM_REPEATS, data_count, int_temp, rssi, volt1, volt2, PACKET_VERSION, NODE_ID);
+#endif
+        
+        
+        
 #ifdef DEBUG
         print(data_temp);
-        //print("\n");
 #endif
         
         transmitData(n);
 
 #ifdef POWER_SAVING
-        if (volt1 > VCC_THRES){
+        if (volt1 > VCC_THRES_1){
             awaitData(TX_GAP);
+        }
+        else if (volt1 > VCC_THRES_2){
+            //Ideally we'll add some power saving here
+            rf69_setMode(RFM69_MODE_SLEEP);
+            delay_ms(60000);
         }
         else{
             //Ideally we'll add some power saving here
             rf69_setMode(RFM69_MODE_SLEEP);
-            delay_ms(60000);
+            delay_ms(120000);
         }
 #else
         awaitData(TX_GAP);
