@@ -102,7 +102,7 @@ void print(const char *s)
         usart_send_blocking(USART1,*s);
         s++;
     }
-    usart_send_blocking(USART1,'\r');
+    usart_send_blocking(USART1,'\n');
 }
 
 #ifdef GPS
@@ -118,8 +118,9 @@ static void adc_setup(void)
 {
     rcc_periph_clock_enable(RCC_ADC);
     rcc_periph_clock_enable(RCC_GPIOA);
+    rcc_periph_clock_enable(RCC_GPIOB);
     
-    //gpio_mode_setup(GPIOA, GPIO_MODE_ANALOG, GPIO_PUPD_NONE, GPIO0);
+    //gpio_mode_setup(GPIOB, GPIO_MODE_ANALOG, GPIO_PUPD_NONE, GPIO0);
     gpio_mode_setup(GPIOA, GPIO_MODE_ANALOG, GPIO_PUPD_NONE, GPIO1);
     gpio_mode_setup(GPIOA, GPIO_MODE_ANALOG, GPIO_PUPD_NONE, GPIO2);
     
@@ -200,7 +201,7 @@ static void systick_setup(int xms)
 static void gpio_setup(void)
 {
 	// Setup GPIO pin GPIO8/9 on GPIO port C for LEDs.
-	//gpio_mode_setup(GPIOA, GPIO_MODE_OUTPUT, GPIO_PUPD_NONE, GPIO8 | GPIO9);
+	gpio_mode_setup(GPIOB, GPIO_MODE_OUTPUT, GPIO_PUPD_NONE, GPIO4 | GPIO5);
     
     // Setup GPIO pin GPIO2 on GPIO port A for Sensor PWR.
     //gpio_mode_setup(GPIOA, GPIO_MODE_OUTPUT, GPIO_PUPD_NONE, GPIO2);
@@ -235,6 +236,8 @@ void incrementPacketCount(void) {
  */
 void transmitData(uint8_t i) {
     
+    gpio_set(GPIOB, GPIO5);	// LED on
+    
 #ifdef GATEWAY
     //fprintf(fp, "rx: %s|0\r\n", data_temp);
 #endif
@@ -251,6 +254,8 @@ void transmitData(uint8_t i) {
     rf69_setMode(RFM69_MODE_RX);
     
     delay_ms(500);
+    
+    gpio_clear(GPIOB, GPIO5);	// LED off
 #endif
 
 }
@@ -286,7 +291,7 @@ inline void processData(uint32_t len) {
             break;
         }
         
-#ifdef GATEWAY
+#ifdef DEBUG
         //print("rx: %s|%d\r\n",data_temp, rf69_lastRssi());
 #endif
         //Reduce the repeat value
@@ -314,6 +319,7 @@ void awaitData(int countdown) {
     
     uint8_t rx_len;
     
+    
     //Clear buffer
     data_temp[0] = '\0';
     
@@ -323,15 +329,22 @@ void awaitData(int countdown) {
         
         // Check rx buffer
         if(checkRx() == 1) {
+            
+            gpio_set(GPIOB, GPIO4);	// LED on
+            
             rf69_recv(data_temp,  &rx_len);
             data_temp[rx_len - 1] = '\0';
             //rx_packets++;
 #ifdef DEBUG
-            //rssi = RFM69_lastRssi();
-            print(data_temp);
-            //printf("RSSI: %d\r\n, rssi");
+            char rx_data[66];
+            int z = 0;
+            z = sprintf(rx_data, "%s|%d\r\n",data_temp, rf69_lastRssi());
+            
+            print(rx_data);
 #endif
             processData(rx_len);
+            
+            gpio_clear(GPIOB, GPIO4);	// LED off
         }
         
         countdown--;
@@ -343,14 +356,16 @@ int main(void)
 {
     
 	int n;
-    uint16_t volt1 = 0, volt2 = 0;
+    uint16_t volt1 = 0, volt2 = 0, raw_volt1 = 0;
+    uint8_t pwr_saving_mode = 0;
 
 	clock_setup();
     
     systick_setup(1); //ticks every 1ms
     
 	gpio_setup();
-    //gpio_clear(GPIOA, GPIO9);	// LED on/off
+    gpio_clear(GPIOB, GPIO4);	// LED off
+    gpio_clear(GPIOB, GPIO5);	// LED off
     
     usart_setup();
     
@@ -372,7 +387,7 @@ int main(void)
 	
 	while (1) {
         // Toggle the LED (PA9) on the board every loop.
-		//gpio_toggle(GPIOA, GPIO9);	// LED on/off
+		gpio_toggle(GPIOB, GPIO4);	// LED on/off
         
         incrementPacketCount();
         int int_temp, rssi;
@@ -381,9 +396,10 @@ int main(void)
         rssi = rf69_sampleRssi();
         
 #ifdef ADC_1
-        volt1 = read_adc_native(0x01) - ADC_1_FUDGE_1;
+        raw_volt1 = read_adc_native(0x01);
+        volt1 = raw_volt1;
         delay_ms(100);
-        volt2 = read_adc_native(0x02) - ADC_1_FUDGE_2;
+        volt2 = read_adc_native(0x02);
 #endif
 
 #ifdef GPS
@@ -398,10 +414,15 @@ int main(void)
         
         gps_get_position();
         
-        n = sprintf(data_temp, "%d%cL%ld,%ld,%ldT%dR%dV%d,%dX%d[%s]", NUM_REPEATS, data_count, lat, lon, alt, int_temp, rssi, volt1, volt2, PACKET_VERSION, NODE_ID);
+        n = sprintf(data_temp, "%d%cL%ld,%ld,%ldT%dR%dV%d,%dX,%d[%s]", NUM_REPEATS, data_count, lat, lon, alt, int_temp, rssi, volt1, volt2, pwr_saving_mode, NODE_ID);
         
 #else
-        n = sprintf(data_temp, "%d%cT%dR%dV%d,%dX%d[%s]", NUM_REPEATS, data_count, int_temp, rssi, volt1, volt2, PACKET_VERSION, NODE_ID);
+        if (data_count == 'z'){
+            n = sprintf(data_temp, "%d%cL%sT%dR%dV%d,%dX%d[%s]", NUM_REPEATS, data_count, LOCATION_STRING, int_temp, rssi, volt1, volt2, pwr_saving_mode, NODE_ID);
+        }
+        else{
+            n = sprintf(data_temp, "%d%cT%dR%dV%d,%dX%d[%s]", NUM_REPEATS, data_count, int_temp, rssi, volt1, volt2, pwr_saving_mode, NODE_ID);
+        }
 #endif
         
         
@@ -413,20 +434,24 @@ int main(void)
         transmitData(n);
 
 #ifdef POWER_SAVING
-        if (volt1 > VCC_THRES_1){
+        if (raw_volt1 > VCC_THRES_1){
+            pwr_saving_mode = 0;
             awaitData(TX_GAP);
         }
-        else if (volt1 > VCC_THRES_2){
+        else if (raw_volt1 > VCC_THRES_2){
             //Ideally we'll add some power saving here
+            pwr_saving_mode = 1;
             rf69_setMode(RFM69_MODE_SLEEP);
             delay_ms(60000);
         }
         else{
             //Ideally we'll add some power saving here
+            pwr_saving_mode = 2;
             rf69_setMode(RFM69_MODE_SLEEP);
-            delay_ms(120000);
+            delay_ms(300000);
         }
 #else
+        pwr_saving_mode = 0;
         awaitData(TX_GAP);
 #endif
 
