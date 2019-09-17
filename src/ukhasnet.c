@@ -54,7 +54,7 @@ static void usart_setup(void)
     usart_set_baudrate(USART1, 9600);
     usart_set_databits(USART1, 8);
     usart_set_parity(USART1, USART_PARITY_NONE);
-    usart_set_stopbits(USART1, USART_CR2_STOP_1_0BIT);
+    usart_set_stopbits(USART1, USART_STOPBITS_1);
     usart_set_mode(USART1, USART_MODE_TX_RX);
     usart_set_flow_control(USART1, USART_FLOWCONTROL_NONE);
     usart_enable_rx_interrupt(USART1);
@@ -337,8 +337,7 @@ void awaitData(int countdown) {
             //rx_packets++;
 #ifdef DEBUG
             char rx_data[66];
-            int z = 0;
-            z = sprintf(rx_data, "%s|%d\r\n",data_temp, rf69_lastRssi());
+            sprintf(rx_data, "%s|%d\r\n",data_temp, rf69_lastRssi());
             
             print(rx_data);
 #endif
@@ -356,7 +355,10 @@ int main(void)
 {
     
 	int n;
-    uint16_t volt1 = 0, volt2 = 0, raw_volt1 = 0;
+    uint16_t volt1 = 0, volt2 = 0;
+#ifdef ADC_1
+    uint16_t raw_volt1 = 0;
+#endif
     uint8_t pwr_saving_mode = 0;
 
 	clock_setup();
