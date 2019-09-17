@@ -382,10 +382,12 @@ int main(void)
 #ifdef ADC_1
     adc_setup();
 #endif
-    
+    print("RF Init Start\n");
     rf69_init();
+    print("RF Init Done\n");
 	
 	while (1) {
+        print("In While Loop\n");
         // Toggle the LED (PA9) on the board every loop.
 		gpio_toggle(GPIOB, GPIO4);	// LED on/off
         
