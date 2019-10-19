@@ -438,22 +438,22 @@ int main(void)
         transmitData(n);
 
 #ifdef POWER_SAVING
-        if (raw_volt1 > VCC_THRES_1){
-            pwr_saving_mode = 0;
-            awaitData(TX_GAP);
-        }
-        else if (raw_volt1 > VCC_THRES_2){
-            //Ideally we'll add some power saving here
-            pwr_saving_mode = 1;
-            rf69_setMode(RFM69_MODE_SLEEP);
-            delay_ms(60000);
-        }
-        else{
+//        if (raw_volt1 > VCC_THRES_1){
+//            pwr_saving_mode = 0;
+//            awaitData(TX_GAP);
+//        }
+//        else if (raw_volt1 > VCC_THRES_2){
+//            //Ideally we'll add some power saving here
+//            pwr_saving_mode = 1;
+//            rf69_setMode(RFM69_MODE_SLEEP);
+//            delay_ms(60000);
+//        }
+//        else{
             //Ideally we'll add some power saving here
             pwr_saving_mode = 2;
             rf69_setMode(RFM69_MODE_SLEEP);
             delay_ms(300000);
-        }
+//        }
 #else
         pwr_saving_mode = 0;
         awaitData(TX_GAP);
